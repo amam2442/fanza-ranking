@@ -30,7 +30,7 @@ from playwright.sync_api import sync_playwright
 API_ID = "3Hg6dFtBHZEpRg5nqbss"
 API_AFFILIATE_ID = "amam2442-990"
 REAL_AFFILIATE_ID = "amam2442-004"
-OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "site")
+OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "")
 VIDEO_DIR = os.path.join(OUTPUT_DIR, "videos")
 
 API_URL = "https://api.dmm.com/affiliate/v3/ItemList"

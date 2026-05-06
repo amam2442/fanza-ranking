@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>毎日エロ動画ランキング</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap');
+  :root {
+    --bg: #fafaf8;
+    --surface: #ffffff;
+    --border: #ebebeb;
+    --accent: #e85d5d;
+    --accent2: #f0a060;
+    --text: #1a1a1a;
+    --muted: #999;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--bg); color:var(--text); font-family:'Noto Sans JP',sans-serif; }
+
+  header {
+    padding:16px 24px;
+    background:#fff;
+    border-bottom:1px solid var(--border);
+    display:flex;
+    align-items:center;
+    gap:12px;
+    position:sticky;
+    top:0;
+    z-index:10;
+    box-shadow:0 1px 8px rgba(0,0,0,0.04);
+  }
+  header .logo { font-size:15px; font-weight:700; letter-spacing:1px; }
+  header .badge { font-size:10px; font-weight:700; color:var(--accent); border:1px solid var(--accent); padding:2px 7px; border-radius:2px; }
+  header .sub { font-size:11px; color:var(--muted); margin-left:auto; }
+
+  .grid {
+    display:grid;
+    grid-template-columns:repeat(auto-fill, minmax(280px,1fr));
+    gap:16px;
+    padding:24px;
+    max-width:1400px;
+    margin:0 auto;
+  }
+
+  .card {
+    background:#fff;
+    border-radius:10px;
+    overflow:hidden;
+    border:1px solid var(--border);
+    box-shadow:0 2px 12px rgba(0,0,0,0.04);
+    cursor:pointer;
+    transition:box-shadow 0.2s, transform 0.2s;
+  }
+  .card:hover { box-shadow:0 6px 24px rgba(0,0,0,0.1); transform:translateY(-2px); }
+
+  .video-wrapper { position:relative; padding-top:56.25%; background:#111; overflow:hidden; border-radius:10px 10px 0 0; }
+  .thumb { position:absolute; top:0; left:0; width:100%; height:100%; object-fit:cover; }
+
+  .play-overlay {
+    position:absolute; inset:0; display:flex; align-items:center; justify-content:center; z-index:2;
+    background:rgba(0,0,0,0.15);
+    transition:background 0.2s;
+  }
+  .card:hover .play-overlay { background:rgba(0,0,0,0.25); }
+  .play-circle {
+    width:52px; height:52px; background:rgba(255,255,255,0.93); border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    box-shadow:0 4px 16px rgba(0,0,0,0.25);
+    transition:transform 0.15s;
+  }
+  .card:hover .play-circle { transform:scale(1.1); }
+  .play-circle svg { width:22px; height:22px; margin-left:3px; }
+
+  .rank {
+    position:absolute; top:10px; left:10px;
+    background:rgba(255,255,255,0.92); color:var(--text);
+    font-size:11px; font-weight:700; width:28px; height:28px;
+    display:flex; align-items:center; justify-content:center;
+    border-radius:50%; z-index:3;
+    box-shadow:0 1px 4px rgba(0,0,0,0.15);
+  }
+  .rank.top3 { background:linear-gradient(135deg,#ffd700,#ffaa00); color:#fff; }
+
+  .card-info { padding:12px 14px 14px; }
+  .card-title {
+    font-size:12px; font-weight:500; line-height:1.6; margin-bottom:8px;
+    display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
+  }
+  .card-meta { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .card-actress { font-size:11px; color:var(--muted); }
+  .card-review { font-size:11px; color:var(--accent2); font-weight:700; }
+  .card-price { font-size:11px; color:var(--accent); font-weight:700; margin-left:auto; }
+
+  /* モーダル */
+  .modal-bg {
+    display:none;
+    position:fixed; inset:0;
+    background:rgba(0,0,0,0.85);
+    z-index:1000;
+    align-items:center;
+    justify-content:center;
+  }
+  .modal-bg.active { display:flex; }
+
+  .modal {
+    background:#000;
+    border-radius:12px;
+    overflow:hidden;
+    width:90vw;
+    max-width:900px;
+    position:relative;
+    box-shadow:0 20px 60px rgba(0,0,0,0.6);
+  }
+
+  .modal video {
+    width:100%;
+    display:block;
+    max-height:80vh;
+    object-fit:contain;
+    background:#000;
+  }
+
+  .modal .close-btn {
+    position:absolute; top:12px; right:12px;
+    background:rgba(255,255,255,0.15); border:none; color:#fff;
+    width:36px; height:36px; border-radius:50%; cursor:pointer;
+    font-size:18px; display:flex; align-items:center; justify-content:center;
+    backdrop-filter:blur(4px);
+    transition:background 0.2s;
+    z-index:10;
+  }
+  .modal .close-btn:hover { background:rgba(255,255,255,0.3); }
+
+  /* プログレスバー */
+  .modal .progress-bar {
+    position:absolute; bottom:0; left:0; height:3px; width:0%;
+    background:linear-gradient(90deg, var(--accent), var(--accent2));
+    z-index:10;
+  }
+
+  footer {
+    padding:24px; text-align:center; color:var(--muted); font-size:11px;
+    border-top:1px solid var(--border); margin-top:8px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <span class="logo">毎日エロ動画ランキング</span>
+  <span class="badge">18+</span>
+  <span class="sub">人気ランキング順</span>
+</header>
+
+<div class="grid">
+
+        <div class="card" onclick="openModal('sqte00633.mp4', 'https://al.fanza.co.jp/?lurl=https%3A%2F%2Fvideo.dmm.co.jp%2Fav%2Fcontent%2F%3Fid%3Dsqte00633&af_id=amam2442-004&ch=api')">
+          <div class="video-wrapper">
+            <img class="thumb" src="videos/sqte00633.jpg" alt="いつでも使えるオナホ後輩 依本しおり" loading="lazy">
+            <div class="play-overlay">
+              <div class="play-circle">
+                <svg viewBox="0 0 24 24"><polygon points="6,4 20,12 6,20" fill="#e85d5d"/></svg>
+              </div>
+            </div>
+            <div class="rank top3">1</div>
+          </div>
+          <div class="card-info">
+            <div class="card-title">いつでも使えるオナホ後輩 依本しおり</div>
+            <div class="card-meta">
+              <span class="card-actress">👤 依本しおり</span>
+              <span class="card-review">★ 4.80（61件）</span>
+              <span class="card-price">580~円〜</span>
+            </div>
+          </div>
+        </div>
+        <div class="card" onclick="openModal('sone00615.mp4', 'https://al.fanza.co.jp/?lurl=https%3A%2F%2Fvideo.dmm.co.jp%2Fav%2Fcontent%2F%3Fid%3Dsone00615&af_id=amam2442-004&ch=api')">
+          <div class="video-wrapper">
+            <img class="thumb" src="videos/sone00615.jpg" alt="最強ヒロインAV初体験3本番 瀬戸環奈" loading="lazy">
+            <div class="play-overlay">
+              <div class="play-circle">
+                <svg viewBox="0 0 24 24"><polygon points="6,4 20,12 6,20" fill="#e85d5d"/></svg>
+              </div>
+            </div>
+            <div class="rank top3">2</div>
+          </div>
+          <div class="card-info">
+            <div class="card-title">最強ヒロインAV初体験3本番 瀬戸環奈</div>
+            <div class="card-meta">
+              <span class="card-actress">👤 瀬戸環奈</span>
+              <span class="card-review">★ 4.80（893件）</span>
+              <span class="card-price">300~円〜</span>
+            </div>
+          </div>
+        </div>
+        <div class="card" onclick="openModal('snos00093.mp4', 'https://al.fanza.co.jp/?lurl=https%3A%2F%2Fvideo.dmm.co.jp%2Fav%2Fcontent%2F%3Fid%3Dsnos00093&af_id=amam2442-004&ch=api')">
+          <div class="video-wrapper">
+            <img class="thumb" src="videos/snos00093.jpg" alt="彼女の妹は最強ヒロイン！？ 僕を好きになりコッソリ迫られる 世界最高の浮気誘惑 瀬戸環奈" loading="lazy">
+            <div class="play-overlay">
+              <div class="play-circle">
+                <svg viewBox="0 0 24 24"><polygon points="6,4 20,12 6,20" fill="#e85d5d"/></svg>
+              </div>
+            </div>
+            <div class="rank top3">3</div>
+          </div>
+          <div class="card-info">
+            <div class="card-title">彼女の妹は最強ヒロイン！？ 僕を好きになりコッソリ迫られる 世界最高の浮気誘惑 瀬戸環奈</div>
+            <div class="card-meta">
+              <span class="card-actress">👤 瀬戸環奈</span>
+              <span class="card-review">★ 4.29（21件）</span>
+              <span class="card-price">2180~円〜</span>
+            </div>
+          </div>
+        </div>
+        <div class="card" onclick="openModal('ofje00594.mp4', 'https://al.fanza.co.jp/?lurl=https%3A%2F%2Fvideo.dmm.co.jp%2Fav%2Fcontent%2F%3Fid%3Dofje00594&af_id=amam2442-004&ch=api')">
+          <div class="video-wrapper">
+            <img class="thumb" src="videos/ofje00594.jpg" alt="S1オールスター23名大集合 全7タイトル全部入り 完全ベスト版16時間 未公開の40人越え乱交初収録" loading="lazy">
+            <div class="play-overlay">
+              <div class="play-circle">
+                <svg viewBox="0 0 24 24"><polygon points="6,4 20,12 6,20" fill="#e85d5d"/></svg>
+              </div>
+            </div>
+            <div class="rank ">4</div>
+          </div>
+          <div class="card-info">
+            <div class="card-title">S1オールスター23名大集合 全7タイトル全部入り 完全ベスト版16時間 未公開の40人越え乱交初収録</div>
+            <div class="card-meta">
+              <span class="card-actress">👤 河北彩伽（河北彩花）・本郷愛</span>
+              <span class="card-review">★ 4.38（13件）</span>
+              <span class="card-price">500~円〜</span>
+            </div>
+          </div>
+        </div>
+        <div class="card" onclick="openModal('snos00038.mp4', 'https://al.fanza.co.jp/?lurl=https%3A%2F%2Fvideo.dmm.co.jp%2Fav%2Fcontent%2F%3Fid%3Dsnos00038&af_id=amam2442-004&ch=api')">
+          <div class="video-wrapper">
+            <img class="thumb" src="videos/snos00038.jpg" alt="AVデビュー1周年記念作品 最強ヒロインとSEXできるファン感謝祭 瀬戸環奈" loading="lazy">
+            <div class="play-overlay">
+              <div class="play-circle">
+                <svg viewBox="0 0 24 24"><polygon points="6,4 20,12 6,20" fill="#e85d5d"/></svg>
+              </div>
+            </div>
+            <div class="rank ">5</div>
+          </div>
+          <div class="card-info">
+            <div class="card-title">AVデビュー1周年記念作品 最強ヒロインとSEXできるファン感謝祭 瀬戸環奈</div>
+            <div class="card-meta">
+              <span class="card-actress">👤 瀬戸環奈</span>
+              <span class="card-review">★ 4.40（48件）</span>
+              <span class="card-price">250~円〜</span>
+            </div>
+          </div>
+        </div>
+        <div class="card" onclick="openModal('ofje00593.mp4', 'https://al.fanza.co.jp/?lurl=https%3A%2F%2Fvideo.dmm.co.jp%2Fav%2Fcontent%2F%3Fid%3Dofje00593&af_id=amam2442-004&ch=api')">
+          <div class="video-wrapper">
+            <img class="thumb" src="videos/ofje00593.jpg" alt="本郷愛 引退 S1全19作コンプリート 15時間BOX" loading="lazy">
+            <div class="play-overlay">
+              <div class="play-circle">
+                <svg viewBox="0 0 24 24"><polygon points="6,4 20,12 6,20" fill="#e85d5d"/></svg>
+              </div>
+            </div>
+            <div class="rank ">6</div>
+          </div>
+          <div class="card-info">
+            <div class="card-title">本郷愛 引退 S1全19作コンプリート 15時間BOX</div>
+            <div class="card-meta">
+              <span class="card-actress">👤 本郷愛</span>
+              <span class="card-review">★ 4.15（13件）</span>
+              <span class="card-price">500~円〜</span>
+            </div>
+          </div>
+        </div>
+        <div class="card" onclick="openModal('1start00257.mp4', 'https://al.fanza.co.jp/?lurl=https%3A%2F%2Fvideo.dmm.co.jp%2Fav%2Fcontent%2F%3Fid%3D1start00257&af_id=amam2442-004&ch=api')">
+          <div class="video-wrapper">
+            <img class="thumb" src="videos/1start00257.jpg" alt="苦手な同僚と飲み会帰りに勢いでワンナイトしてしまったら膣奥フィットするチ〇ポの相性が良すぎて人生最高の絶頂感を味わってしまい…全然好きじゃないのにおかわりセックスしまくった 小湊よつ葉" loading="lazy">
+            <div class="play-overlay">
+              <div class="play-circle">
+                <svg viewBox="0 0 24 24"><polygon points="6,4 20,12 6,20" fill="#e85d5d"/></svg>
+              </div>
+            </div>
+            <div class="rank ">7</div>
+          </div>
+          <div class="card-info">
+            <div class="card-title">苦手な同僚と飲み会帰りに勢いでワンナイトしてしまったら膣奥フィットするチ〇ポの相性が良すぎて人生最高の絶頂感を味わってしまい…全然好きじゃないのにおかわりセックスしまくった 小湊よつ葉</div>
+            <div class="card-meta">
+              <span class="card-actress">👤 小湊よつ葉</span>
+              <span class="card-review">★ 4.80（54件）</span>
+              <span class="card-price">300~円〜</span>
+            </div>
+          </div>
+        </div>
+        <div class="card" onclick="openModal('snos00115.mp4', 'https://al.fanza.co.jp/?lurl=https%3A%2F%2Fvideo.dmm.co.jp%2Fav%2Fcontent%2F%3Fid%3Dsnos00115&af_id=amam2442-004&ch=api')">
+          <div class="video-wrapper">
+            <img class="thumb" src="videos/snos00115.jpg" alt="新人NO.1 STYLE ビジュ爆発！新時代 グラビアアイドル 博多彩葉 AVデビュー" loading="lazy">
+            <div class="play-overlay">
+              <div class="play-circle">
+                <svg viewBox="0 0 24 24"><polygon points="6,4 20,12 6,20" fill="#e85d5d"/></svg>
+              </div>
+            </div>
+            <div class="rank ">8</div>
+          </div>
+          <div class="card-info">
+            <div class="card-title">新人NO.1 STYLE ビジュ爆発！新時代 グラビアアイドル 博多彩葉 AVデビュー</div>
+            <div class="card-meta">
+              <span class="card-actress">👤 博多彩葉</span>
+              <span class="card-review">★ 4.21（75件）</span>
+              <span class="card-price">2680~円〜</span>
+            </div>
+          </div>
+        </div>
+        <div class="card" onclick="openModal('mizd00441.mp4', 'https://al.fanza.co.jp/?lurl=https%3A%2F%2Fvideo.dmm.co.jp%2Fav%2Fcontent%2F%3Fid%3Dmizd00441&af_id=amam2442-004&ch=api')">
+          <div class="video-wrapper">
+            <img class="thumb" src="videos/mizd00441.jpg" alt="篠田ゆう MOODYZ完全版 極コンプリート1440分BEST" loading="lazy">
+            <div class="play-overlay">
+              <div class="play-circle">
+                <svg viewBox="0 0 24 24"><polygon points="6,4 20,12 6,20" fill="#e85d5d"/></svg>
+              </div>
+            </div>
+            <div class="rank ">9</div>
+          </div>
+          <div class="card-info">
+            <div class="card-title">篠田ゆう MOODYZ完全版 極コンプリート1440分BEST</div>
+            <div class="card-meta">
+              <span class="card-actress">👤 篠田ゆう</span>
+              <span class="card-review">★ 4.90（21件）</span>
+              <span class="card-price">300~円〜</span>
+            </div>
+          </div>
+        </div>
+</div>
+
+<!-- モーダル -->
+<div class="modal-bg" id="modalBg" onclick="closeModalOnBg(event)">
+  <div class="modal" id="modal">
+    <button class="close-btn" onclick="closeModal()">✕</button>
+    <video id="modalVideo" controls autoplay playsinline></video>
+    <div class="progress-bar" id="modalProgress"></div>
+  </div>
+</div>
+
+<footer>※18歳未満の方はご利用いただけません。成人向けコンテンツを含みます。</footer>
+
+<script>
+let currentTimer = null;
+let currentAffiliate = null;
+const WATCH_SECONDS = 45;
+
+function openModal(videoFile, affiliateUrl) {
+  const modalBg = document.getElementById("modalBg");
+  const video = document.getElementById("modalVideo");
+  const progress = document.getElementById("modalProgress");
+
+  // 前のタイマーをクリア
+  if (currentTimer) clearTimeout(currentTimer);
+  currentAffiliate = affiliateUrl;
+
+  // 動画をセット
+  video.src = "videos/" + videoFile;
+  video.load();
+  video.play();
+
+  // プログレスバーリセット
+  progress.style.transition = "none";
+  progress.style.width = "0%";
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      progress.style.transition = "width " + WATCH_SECONDS + "s linear";
+      progress.style.width = "100%";
+    });
+  });
+
+  // モーダルを開く
+  modalBg.classList.add("active");
+
+  // 45秒後にアフィリエイトリンクへ
+  currentTimer = setTimeout(() => {
+    window.location.href = affiliateUrl;
+  }, WATCH_SECONDS * 1000);
+}
+
+function closeModal() {
+  const modalBg = document.getElementById("modalBg");
+  const video = document.getElementById("modalVideo");
+  const progress = document.getElementById("modalProgress");
+
+  video.pause();
+  video.src = "";
+  modalBg.classList.remove("active");
+  progress.style.transition = "none";
+  progress.style.width = "0%";
+
+  if (currentTimer) {
+    clearTimeout(currentTimer);
+    currentTimer = null;
+  }
+}
+
+function closeModalOnBg(e) {
+  if (e.target === document.getElementById("modalBg")) {
+    closeModal();
+  }
+}
+
+// Escキーで閉じる
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape") closeModal();
+});
+</script>
+</body>
+</html>
